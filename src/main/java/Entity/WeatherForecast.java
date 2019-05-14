@@ -12,8 +12,6 @@ public class WeatherForecast implements Serializable {
     private LocalDateTime date;
     private String city;
     private String weather;
-    @Nullable
-    private Integer clear;
 
     public WeatherForecast(String dateStr, String city, String weather) {
         DateTimeFormatter dateTimeFormatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
@@ -59,15 +57,6 @@ public class WeatherForecast implements Serializable {
 
     public int getHour(){
         return this.date.getHourOfDay();
-    }
-
-    @Nullable
-    public Integer getClear() {
-        return clear;
-    }
-
-    public void setClear(@Nullable Integer clear) {
-        this.clear = clear;
     }
 
     //For test purpose, erase before delivery
