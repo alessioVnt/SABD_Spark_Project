@@ -1,5 +1,6 @@
 package utilities;
 
+import Entity.CityTemperatureMisurements;
 import Entity.WeatherForecast;
 
 import java.util.List;
@@ -16,9 +17,7 @@ public class ForecastParser {
 
         if(words[0].equals("datetime")){
             citiesList = new String[words.length-1];
-            for(int i=1;i<words.length; i++){
-                citiesList[i-1] = words[i];
-            }
+            System.arraycopy(words, 1, citiesList, 0, words.length - 1);
             return null;
         }
         else {
@@ -30,6 +29,24 @@ public class ForecastParser {
                 weatherForecasts[i-1] = new WeatherForecast(words[0], citiesList[i-1], words[i] );
             }
             return weatherForecasts;
+        }
+    }
+
+    public static CityTemperatureMisurements[] parseForecastTemperature(String line){
+
+        String[] words = COMMA.split(line);
+
+        if(words[0].equals("datetime")){
+            citiesList = new String[words.length-1];
+            System.arraycopy(words, 1, citiesList, 0, words.length - 1);
+            return null;
+        }
+        else {
+            CityTemperatureMisurements[] cityTemperatureMisurements = new CityTemperatureMisurements[words.length - 1];
+            for(int i = 1; i < words.length ; i++){
+                if (!words[i].equals("")) cityTemperatureMisurements[i-1] = new CityTemperatureMisurements(words[0], citiesList[i-1], Double.parseDouble(words[i]) );
+            }
+            return cityTemperatureMisurements;
         }
     }
 }
