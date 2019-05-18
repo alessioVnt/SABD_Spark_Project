@@ -12,13 +12,12 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
-import org.joda.time.LocalDateTime;
 import scala.Tuple2;
 import utilities.ForecastParser;
 
-import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 public class Query1 {
@@ -43,7 +42,7 @@ public class Query1 {
 
         //Remove header line and flatmap to create WeatherForecast entities
         JavaRDD<WeatherForecast> weatherForecasts = rawForecast.subtract(headerRDD)
-                .flatMap(line -> Arrays.asList(ForecastParser.parseForecast(line)).iterator())
+                .flatMap(line -> Arrays.asList(Objects.requireNonNull(ForecastParser.parseForecast(line))).iterator())
                 .filter(w -> w.getMonth() >= 3 && w.getMonth() <= 5);
 
         //Getting years list
