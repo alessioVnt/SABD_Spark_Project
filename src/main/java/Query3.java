@@ -6,7 +6,7 @@ import org.apache.spark.api.java.JavaSparkContext;
 import scala.Tuple2;
 import utilities.ForecastParser;
 
-import java.util.Arrays;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 public class Query3 {
@@ -29,7 +29,7 @@ public class Query3 {
         ForecastParser.parseForecast(header);
 
         //Get data about 2016/2017 from raw file, excluding irrelevant months
-        JavaRDD<CityTemperatureMisurements> cityTemperatureMisurementsJavaRDD = rawData.subtract(headerRDD).flatMap(line -> Arrays.asList(ForecastParser.parseForecastTemperature(line)).iterator())
+        JavaRDD<CityTemperatureMisurements> cityTemperatureMisurementsJavaRDD = rawData.subtract(headerRDD).flatMap(line -> Objects.requireNonNull(ForecastParser.parseForecastTemperature(line)).iterator())
                 .filter(y -> y.getYear() == 2016 || y.getYear() == 2017)
                 .filter(w -> w.getMonth() != 5 && w.getMonth() != 10 && w.getMonth() != 11 && w.getMonth() != 12)
                 .filter(h -> h.getHour() >= 12 && h.getHour() <= 15)

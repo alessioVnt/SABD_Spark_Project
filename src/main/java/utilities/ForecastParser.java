@@ -3,6 +3,7 @@ package utilities;
 import Entity.CityTemperatureMisurements;
 import Entity.WeatherForecast;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -32,7 +33,7 @@ public class ForecastParser {
         }
     }
 
-    public static CityTemperatureMisurements[] parseForecastTemperature(String line){
+    public static List<CityTemperatureMisurements> parseForecastTemperature(String line){
 
         String[] words = COMMA.split(line);
 
@@ -42,9 +43,9 @@ public class ForecastParser {
             return null;
         }
         else {
-            CityTemperatureMisurements[] cityTemperatureMisurements = new CityTemperatureMisurements[words.length - 1];
+            List<CityTemperatureMisurements> cityTemperatureMisurements = new ArrayList<>();
             for(int i = 1; i < words.length ; i++){
-                if (!words[i].equals("")) cityTemperatureMisurements[i-1] = new CityTemperatureMisurements(words[0], citiesList[i-1], Double.parseDouble(words[i]) );
+                if (!words[i].equals("")) cityTemperatureMisurements.add(new CityTemperatureMisurements(words[0], citiesList[i-1], Double.parseDouble(words[i]) ));
             }
             return cityTemperatureMisurements;
         }
