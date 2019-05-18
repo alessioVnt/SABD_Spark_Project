@@ -6,6 +6,8 @@ import org.apache.spark.api.java.JavaSparkContext;
 import scala.Tuple2;
 import utilities.ForecastParser;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -17,9 +19,12 @@ public class Query3 {
                 .setMaster("local")
                 .setAppName("Forecast Query#3");
         JavaSparkContext sc = new JavaSparkContext(conf);
+        sc.setLogLevel("WARN");
 
         //Read from the csv
         JavaRDD<String> rawData = sc.textFile("data/temperature.csv");
+        //Getting the cities/nations hashmap
+        ForecastParser.parseLatLong(sc.textFile("data/city_attributes.csv").filter(line -> !line.contains("City,Latitude")).collect());
 
         Long startTime = System.nanoTime();
 
@@ -50,8 +55,43 @@ public class Query3 {
                 .union(calculateAvg(cityTemperatureWinter2017))
                 .reduceByKey((x, y) -> x - y);
 
-        System.out.println("city gap 2016: " + cityGap2016.collect().toString());
-        System.out.println("city gap 2017: " + cityGap2017.collect().toString());
+        //Creation of an RDD with nations as key
+        JavaPairRDD<String, Tuple2<String, Double>> nationsGap2016 = cityGap2016.mapToPair(c -> new Tuple2<>(ForecastParser.getNation(c._1), new Tuple2<>(c._1, c._2)));
+        JavaPairRDD<String, Tuple2<String, Double>> nationsGap2017 = cityGap2017.mapToPair(c -> new Tuple2<>(ForecastParser.getNation(c._1), new Tuple2<>(c._1, c._2)));
+
+        //Collect the list of nations that are contained in RDDs
+        List<String> nationKeys = nationsGap2016.keys().distinct().collect();
+
+        //This list will contain all the RDD (1 for each nation), that contain the pair nation/city - temperature gap
+        List<JavaPairRDD<String,Double>> cityGaps2016List = new ArrayList<>();
+        List<JavaPairRDD<String,Double>> cityGaps2017List = new ArrayList<>();
+
+        for (String nation: nationKeys) {
+            JavaPairRDD<String, Double> cityGapsByNation16 = nationsGap2016.filter(n -> n._1.equals(nation)).mapToPair(n -> new Tuple2<>(n._1 + "/" + n._2._1, n._2._2));
+            cityGaps2016List.add(cityGapsByNation16);
+
+            //TODO: rimuovere questa prova di stampa dei risultati
+            System.out.println("Top 3 temperature gaps for " + nation + " in year 2016: ");
+            JavaPairRDD<Double, String> invertedCityGaps16 = cityGapsByNation16.mapToPair(c -> new Tuple2<>(c._2, c._1)).sortByKey();
+            List<Tuple2<Double, String>> top316 = invertedCityGaps16.take(3);
+            for (Tuple2<Double, String> value: top316) {
+                System.out.println("Nation/City:  " + value._2 + " with temperature gap of: " + value._1);
+            }
+
+            JavaPairRDD<String, Double> cityGapsByNation17 = nationsGap2017.filter(n -> n._1.equals(nation)).mapToPair(n -> new Tuple2<>(n._1 + "/" + n._2._1, n._2._2));
+            cityGaps2017List.add(cityGapsByNation17);
+
+            //TODO: rimuovere questa prova di stampa dei risultati
+            System.out.println("Top 3 temperature gaps for " + nation + " in year 2017: ");
+            JavaPairRDD<Double, String> invertedCityGaps17 = cityGapsByNation17.mapToPair(c -> new Tuple2<>(c._2, c._1)).sortByKey();
+            List<Tuple2<Double, String>> top317 = invertedCityGaps17.take(3);
+            for (Tuple2<Double, String> value: top317) {
+                System.out.println("Nation/City:  " + value._2 + " with temperature gap of: " + value._1);
+            }
+        }
+
+        //System.out.println("city gap 2016: " + cityGap2016.collect().toString());
+        //System.out.println("city gap 2017: " + cityGap2017.collect().toString());
 
         Long endTime = System.nanoTime();
         Long timeElapsed = TimeUnit.NANOSECONDS.toMillis(endTime - startTime);

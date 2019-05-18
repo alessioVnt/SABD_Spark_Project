@@ -40,7 +40,6 @@ public class MeasurementParser {
 
         String[] words = COMMA.split(line);
         citiesList = new String[words.length-1];
-        //TODO: controlla se funziona questo tipo di copia dell'array
         System.arraycopy(words, 1, citiesList, 0, words.length - 1);
     }
 
