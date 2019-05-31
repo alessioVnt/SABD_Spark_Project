@@ -17,8 +17,11 @@ NiFi:
 
 Kafka:
 1- Per avviare Zookeeper e Kafka, eseguire dalla cartella dove è installato Kafka, i comandi:
+
     1- bin/zookeeper-server-start.sh config/zookeeper.properties
+    
     2- bin/kafka-server-start.sh config/server.properties
+    
     
 HDFS:
 per HDFS è stata utilizzata l'immagine fornita a laboratorio effeerre/hadoop.
