@@ -7,11 +7,15 @@ Nota: tempo sereno nei mesi di marzo, aprile e maggio da intendersi in AND. Dete
 per decidere se il giorno e sereno, considerando l’informazione oraria a disposizione.
 */
 
+import Entity.Query1Out;
 import Entity.WeatherForecast;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import scala.Tuple2;
 import utilities.ForecastParser;
 
@@ -32,6 +36,7 @@ public class Query1 {
 
         //Read from the csv
         JavaRDD<String> rawForecast = sc.textFile("data/weather_description.csv");
+
 
         Long startTime = System.nanoTime();
 
@@ -70,22 +75,38 @@ public class Query1 {
                 .mapToPair(y -> new Tuple2<>(y._1, y._2 == 3 ? 1 : 0))
                 .filter(y -> y._2 == 1);
 
-        System.out.println(yearWeather.collect().toString());
 
-        List<Tuple2<Integer, String>> query1Cities = yearWeather.mapToPair(y -> new Tuple2<>(Integer.parseInt(y._1.substring(y._1.length() - 4, y._1.length())), y._1.substring(0, y._1.length() - 4)))
+        //Creation of dataframe that will be converted in Json
+        SparkSession spark = SparkSession.builder().appName("Query1DF")
+                .master("local")
+                .getOrCreate();
+        spark.sparkContext().setLogLevel("ERROR");
+
+        //RDD containing entity Query1Out to be transformed in DataFrame
+        JavaRDD<Query1Out> output = yearWeather.mapToPair(y -> new Tuple2<>(Integer.parseInt(y._1.substring(y._1.length() - 4, y._1.length())), y._1.substring(0, y._1.length() - 4)))
                 .sortByKey()
-                .collect();
+                .map(x -> new Query1Out(x._1.toString(), x._2));
 
-        System.out.println("Lista città con almeno 15 giorni di cielo sereno nei mesi di Marzo, Aprile, Maggio:  ");
+        //Creation of dataframe
+        Dataset<Row> outDF =  spark.createDataFrame(output, Query1Out.class);
+
+        //convert dataframe to Json and save in HDFS
+        outDF.coalesce(1).write().format("json").save("hdfs://localhost:54310/output/query1output");
+
+
+        //Print output, just for debug purpose
+        /*System.out.println("Lista città con almeno 15 giorni di cielo sereno nei mesi di Marzo, Aprile, Maggio:  ");
         for (Tuple2<Integer, String> q : query1Cities) {
             System.out.println(q._1 + "  " + q._2);
-        }
+        }*/
 
+        //Stop execution time for metrics
         Long endTime = System.nanoTime();
 
         Long timeElapsed = TimeUnit.NANOSECONDS.toMillis(endTime - startTime);
 
         System.out.println("TIME ELAPSED -->  " + timeElapsed);
+
 
         //JavaPairRDD<LocalDateTime, Tuple2<String,Integer>> dayWeather = hourWeather.reduceByKey((x, y) -> x._2 + y._2 );
 

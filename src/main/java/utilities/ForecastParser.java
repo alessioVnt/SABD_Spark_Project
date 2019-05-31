@@ -5,6 +5,7 @@ import Entity.WeatherForecast;
 import com.mapbox.api.geocoding.v5.GeocodingCriteria;
 import com.mapbox.api.geocoding.v5.MapboxGeocoding;
 import com.mapbox.geojson.Point;
+import scala.Tuple2;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -16,6 +17,7 @@ import java.util.regex.Pattern;
 public class ForecastParser {
 
     private static Map<String, String> cityNationMap = new HashMap<>();
+    private static Map<String, Tuple2<Double, Double>> latLongMap= new HashMap<>();
     private static String[] citiesList;
     private static Pattern COMMA = Pattern.compile(",");
 
@@ -34,6 +36,8 @@ public class ForecastParser {
                 country = reverseGeocode.executeCall().body().features().get(0).placeName();
             } catch (IOException e) {e.printStackTrace();}
             cityNationMap.put(words[0], country);
+            Tuple2<Double, Double> latLong = new Tuple2<Double, Double>(Double.parseDouble(words[1]), Double.parseDouble(words[2]));
+            latLongMap.put(words[0], latLong);
         }
     }
 
@@ -78,5 +82,14 @@ public class ForecastParser {
 
     public static String getNation(String city){
         return cityNationMap.get(city);
+    }
+
+    public static Tuple2<Double, Double> getLatLong(String city){ return latLongMap.get(city); }
+
+    public static CityTemperatureMisurements convertMeasurement(CityTemperatureMisurements toConvert){
+
+        toConvert.convertDate(getLatLong(toConvert.getCity())._1, getLatLong(toConvert.getCity())._2);
+        return toConvert;
+
     }
 }

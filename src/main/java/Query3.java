@@ -1,8 +1,12 @@
 import Entity.CityTemperatureMisurements;
+import Entity.Query3Out;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import scala.Tuple2;
 import utilities.ForecastParser;
 
@@ -33,9 +37,11 @@ public class Query3 {
         String header = headerRDD.collect().get(0);
         ForecastParser.parseForecast(header);
 
+
         //Get data about 2016/2017 from raw file, excluding irrelevant months
         JavaRDD<CityTemperatureMisurements> cityTemperatureMisurementsJavaRDD = rawData.subtract(headerRDD).flatMap(line -> Objects.requireNonNull(ForecastParser.parseForecastTemperature(line)).iterator())
                 .filter(y -> y.getYear() == 2016 || y.getYear() == 2017)
+                .map(ctm -> ForecastParser.convertMeasurement(ctm))
                 .filter(w -> w.getMonth() != 5 && w.getMonth() != 10 && w.getMonth() != 11 && w.getMonth() != 12)
                 .filter(h -> h.getHour() >= 12 && h.getHour() <= 15)
                 //Catch error on temperature's data, assume t < 1000K
@@ -66,36 +72,59 @@ public class Query3 {
         List<JavaPairRDD<String,Double>> cityGaps2016List = new ArrayList<>();
         List<JavaPairRDD<String,Double>> cityGaps2017List = new ArrayList<>();
 
+        //list that will contain the RDD with the outputs
+        List<JavaRDD<Query3Out>> outputList = new ArrayList<>();
+
         for (String nation: nationKeys) {
+
             JavaPairRDD<String, Double> cityGapsByNation16 = nationsGap2016.filter(n -> n._1.equals(nation)).mapToPair(n -> new Tuple2<>(n._1 + "/" + n._2._1, n._2._2));
             cityGaps2016List.add(cityGapsByNation16);
 
-            //TODO: rimuovere questa prova di stampa dei risultati
-            System.out.println("Top 3 temperature gaps for " + nation + " in year 2016: ");
             JavaPairRDD<Double, String> invertedCityGaps16 = cityGapsByNation16.mapToPair(c -> new Tuple2<>(c._2, c._1)).sortByKey();
             List<Tuple2<Double, String>> top316 = invertedCityGaps16.take(3);
-            for (Tuple2<Double, String> value: top316) {
-                System.out.println("Nation/City:  " + value._2 + " with temperature gap of: " + value._1);
-            }
+            //Creation of RDD<Query3Out> that contains the POJO for the dataframe
+            outputList.add(sc.parallelize(top316).map(x -> new Query3Out(x._2, "2016", x._1)));
+
 
             JavaPairRDD<String, Double> cityGapsByNation17 = nationsGap2017.filter(n -> n._1.equals(nation)).mapToPair(n -> new Tuple2<>(n._1 + "/" + n._2._1, n._2._2));
             cityGaps2017List.add(cityGapsByNation17);
 
-            //TODO: rimuovere questa prova di stampa dei risultati
-            System.out.println("Top 3 temperature gaps for " + nation + " in year 2017: ");
             JavaPairRDD<Double, String> invertedCityGaps17 = cityGapsByNation17.mapToPair(c -> new Tuple2<>(c._2, c._1)).sortByKey();
             List<Tuple2<Double, String>> top317 = invertedCityGaps17.take(3);
-            for (Tuple2<Double, String> value: top317) {
-                System.out.println("Nation/City:  " + value._2 + " with temperature gap of: " + value._1);
-            }
+
+            //Creation of RDD<Query3Out> that contains the POJO for the dataframe
+            outputList.add(sc.parallelize(top317).map(x -> new Query3Out(x._2, "2017", x._1)));
+
         }
 
-        //System.out.println("city gap 2016: " + cityGap2016.collect().toString());
-        //System.out.println("city gap 2017: " + cityGap2017.collect().toString());
+        //Unifying the outputs in one RDD
+        JavaRDD<Query3Out> output = outputList.get(0);
 
+        boolean first = true;
+
+        for (JavaRDD<Query3Out> out: outputList) {
+            if (!first) output = output.union(out);
+            else first = false;
+        }
+
+        //Creation of dataframe that will be converted in Json
+        SparkSession spark = SparkSession.builder()
+                .appName("Query3DF")
+                .master("local")
+                .getOrCreate();
+        spark.sparkContext().setLogLevel("ERROR");
+
+        //Dataframe creation from RDD
+        Dataset<Row> outDF =  spark.createDataFrame(output, Query3Out.class);
+
+        //convert dataframe to Json and save in HDFS
+        outDF.coalesce(1).write().format("json").save("hdfs://localhost:54310/output/query3output");
+
+        //Stopping timer for execution time metrics
         Long endTime = System.nanoTime();
         Long timeElapsed = TimeUnit.NANOSECONDS.toMillis(endTime - startTime);
         System.out.println("TIME ELAPSED -->  " + timeElapsed);
+
         sc.stop();
     }
 

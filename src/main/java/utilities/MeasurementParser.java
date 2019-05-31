@@ -1,5 +1,6 @@
 package utilities;
 
+import Entity.CityTemperatureMisurements;
 import com.mapbox.api.geocoding.v5.GeocodingCriteria;
 import com.mapbox.api.geocoding.v5.MapboxGeocoding;
 import com.mapbox.geojson.Point;

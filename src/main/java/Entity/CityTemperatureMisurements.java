@@ -3,6 +3,7 @@ package Entity;
 import org.joda.time.LocalDateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+import utilities.TimeZoneConverter;
 
 import java.io.Serializable;
 
@@ -57,5 +58,9 @@ public class CityTemperatureMisurements implements Serializable {
 
     public int getYear(){
         return this.date.getYear();
+    }
+
+    public void convertDate(double latitude, double longitude){
+        this.date = TimeZoneConverter.convertTimeZone(this.date, (long)latitude, (long)longitude);
     }
 }
