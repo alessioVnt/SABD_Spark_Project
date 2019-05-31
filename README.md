@@ -19,7 +19,7 @@ Kafka:
     2- bin/kafka-server-start.sh config/server.properties
     
 HDFS:
-per HDFS è stato utilizzato il container fornito a laboratoria effeerre/hadoop.
+per HDFS è stata utilizzata l'immagine fornita a laboratorio effeerre/hadoop.
 Per avviare HDFS eseguire i comandi presenti in scaletta.txt fornita a lezione (assicurandosi di aggiungere al master l'opzione -p54310:54310):
   sudo docker network create --driver bridge hadoop_network
   sudo docker run -t -i -p 9864:9864 -d --network=hadoop_network --name=slave1 effeerre/hadoop
@@ -43,11 +43,18 @@ Flume:
 2- dalla directory dove è installato flume eseguire il comando: bin/flume-ng agent -n agent -c conf -f conf/flume-conf.properties -Dflume.root.logger=INFO,console
 
 Questo conclude la fase di data ingestion.
+Prima di andare ad eseguire le query tramite Spark assicurarsi di inizializzare mongoDB (è stata utilizzata l'immagine ufficiale ed i comandi visti a laboratorio):
+1- docker pull mongo
+2- docker network create mongonet
+3- docker run -i -t -p 27017:27017 --name mongo_server --network=mongonet mongo:latest /usr/bin/mongod --smallfiles --bind_ip_all
 
-A questo punto eseguire il codice Java contenuto nella repository per le varie query:
+Nel template di NiFi caricato in precedenza sono presenti anche i processors che si occuperanno di portare i dati da HDFS a MongoDB.
+
+A questo punto eseguire il codice Java contenuto nella repository per le varie query con Spark:
 - Main class query 1: src/main/java/Query1
 - Main class query 2: src/main/java/Query2
 - Main class query 3: src/main/java/Query3
+
   
 
  
