@@ -91,7 +91,7 @@ public class Query1 {
         Dataset<Row> outDF =  spark.createDataFrame(output, Query1Out.class);
 
         //convert dataframe to Json and save in HDFS
-        outDF.coalesce(1).write().format("json").save("hdfs://localhost:54310/output/query1output");
+        outDF.coalesce(1).write().format("json").save("hdfs://localhost:54310/output/query1/q1output");
 
 
         //Print output, just for debug purpose

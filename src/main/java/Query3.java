@@ -118,7 +118,7 @@ public class Query3 {
         Dataset<Row> outDF =  spark.createDataFrame(output, Query3Out.class);
 
         //convert dataframe to Json and save in HDFS
-        outDF.coalesce(1).write().format("json").save("hdfs://localhost:54310/output/query3output");
+        outDF.coalesce(1).write().format("json").save("hdfs://localhost:54310/output/query3/q3output");
 
         //Stopping timer for execution time metrics
         Long endTime = System.nanoTime();
